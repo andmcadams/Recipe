@@ -163,6 +163,29 @@ function p.main(frame)
 	return p._main(frame, args, args.tools, skills, members, args.notes, materials, output, args.facilities, args.ticks, args.ticksnote, nosmw)
 end
 
+-- Return the "Total Cost" row of the recipe table.
+-- Inputs:
+--        items - table, generated from mat_list
+-- 		  item_costs - table, contains currencies as keys and amount for all items as values (can be generated from create_rows)
+-- Outputs:
+--		  total_cost_row - html element, tr element that contains all the information about the costs of from item_costs
+function generate_total_cost_row(items, item_costs)
+	local total_cost_row = mw.html.create('tr')
+
+	if #items == 0 then
+		total_cost_row:tag('td'):attr('colspan','5')
+			:css({ ['font-style'] = 'italic', ['text-align'] = 'center' }):wikitext('Materials unlisted '..editbutton()):done()
+	else
+		local total_cost_breakdown = ''
+		for i, v in next, item_costs, nil do
+			total_cost_breakdown = (string.len(total_cost_breakdown) == 0 and total_cost_breakdown or total_cost_breakdown .. '<br />') .. (i == 'Coins' and coins(v) or currencies(v, i))
+		end
+		total_cost_row:tag('th'):attr('colspan', 3):css({['text-align'] = 'right'}):wikitext('Total Cost'):done()
+			:tag('td'):css({['text-align'] = 'right'}):wikitext(total_cost_breakdown)
+	end
+
+	return total_cost_row
+end
 --
 -- Main
 --
@@ -231,8 +254,8 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		return table.concat(links, "<br />")
 	end
 
-	----------------------------------------------------------------------------
-	-- Create table for requirements
+----------------------------------------------------------------------------
+-- Create table for requirements
 	-- This table contains skill reqs and xp, quest reqs, members req, and ticks
 	local requirements = mw.html.create('table')
 			:addClass('wikitable align-center-2 align-right-3')
@@ -320,11 +343,11 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 			:tag('td'):css({ ['text-align'] = 'center' }):wikitext(facilityLnks):done()
 	end
 	
-	-- END OF REQUIREMENTS table
-	----------------------------------------------------------------------------
+-- END OF REQUIREMENTS table
+----------------------------------------------------------------------------
 
-	----------------------------------------------------------------------------
-	-- Create table for materials and products
+----------------------------------------------------------------------------
+-- Create table for materials and products
 	-- Contains materials (item, qty, cost), total cost, products, and profit
 
 	local materialsTable = mw.html.create('table')
@@ -341,25 +364,51 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		:tag('th'):wikitext('Cost'):done()
 
 	-- Materials
-	local currency_costs = {
-		['Coins'] = 0 
-	}
 
-	for i, v in ipairs(materials) do
-		row, row_cost = make_row(v)
-		
-		if row_cost ~= 0 then
-			if v.currency_name ~= nil then
-				currency_costs[v.currency_name] = (currency_costs[v.currency_name] and currency_costs[v.currency_name] or 0) + v.quantity * v.cost
-			else
-				currency_costs['Coins'] = currency_costs['Coins'] + v.quantity * v.cost
+	-- Take a table created from mat_list and generate rows from it.
+	-- Outputs:
+	--		   rows - array, each entry is a row for one item in the items table
+	--         currency_costs - table, a table containing currencies as keys and amount for all items as values
+	--		   has_ref_tag - bool, true iff one or more items have a note set
+	local function create_rows(items)
+
+		local currency_costs = {
+			['Coins'] = 0 
+		}
+
+		local has_ref_tag = false
+		rows = {}
+		for i, v in ipairs(items) do
+			local row, row_cost, has_row_note = make_row(v)
+			
+			if row_cost ~= 0 then
+				if v.currency_name ~= nil then
+					currency_costs[v.currency_name] = (currency_costs[v.currency_name] and currency_costs[v.currency_name] or 0) + v.quantity * v.cost
+				else
+					currency_costs['Coins'] = currency_costs['Coins'] + v.quantity * v.cost
+				end
 			end
+
+			has_ref_tag = has_ref_tag or has_row_note
+			table.insert(rows, row)
 		end
 
-		materialsTable:node(row)
+
+		return rows, currency_costs, has_ref_tag
 	end
 	
+	material_rows, currency_costs, has_material_ref_tag = create_rows(materials)
+
+	hasreftag = hasreftag or has_material_ref_tag
+
+	for _, row in ipairs(material_rows) do
+		materialsTable:node(row)
+	end
+
 	-- Total cost
+	local total_cost_row = generate_total_cost_row(materials, currency_costs)
+	materialsTable:node(total_cost_row)
+
 	if #materials == 0 then
 		materialsTable:tag('tr')
 			:tag('td'):attr('colspan','5'):css({ ['font-style'] = 'italic', ['text-align'] = 'center' }):wikitext('Materials unlisted '..editbutton()):done()
@@ -374,21 +423,11 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 	end
 	
 	-- Products
-	local output_cost = {
-		['Coins'] = 0
-	}
-	for i, v in ipairs(output) do
-		row, row_cost, has_row_note = make_row(v)
-		
-		if row_cost ~= 0 then
-			if v.currency_name ~= nil then
-				output_cost[v.currency_name] = (output_cost[v.currency_name] and output_cost[v.currency_name] or 0) + v.quantity * v.cost
-			else
-				output_cost['Coins'] = output_cost['Coins'] + v.quantity * v.cost
-			end
-		end
+	output_rows, output_cost, has_output_ref_tag = create_rows(output)
 
-		hasreftag = hasreftag or has_output_note
+	hasreftag = hasreftag or has_output_ref_tag
+
+	for _, row in ipairs(output_rows) do
 		materialsTable:node(row)
 	end
 
@@ -425,8 +464,8 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 			:tag('td'):css({['text-align'] = 'right'}):wikitext(coins(profit) .. note)
 	end
 	
-	-- END OF MATERIALS AND PRODUCTS table
-	----------------------------------------------------------------------------
+-- END OF MATERIALS AND PRODUCTS table
+----------------------------------------------------------------------------
 
 	-- Append the two tables a parent div
 	local parent = mw.html.create('div')
