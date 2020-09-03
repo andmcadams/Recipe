@@ -230,15 +230,22 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		end
 		return table.concat(links, "<br />")
 	end
+
+	-- Create div for recipe table
 	local parent = mw.html.create('div')
 			:css({width = 'max-content' })
 
+	----------------------------------------------------------------------------
+	-- Create table for requirements
+	-- This table contains skill reqs and xp, quest reqs, members req, and ticks
 	local requirements = mw.html.create('table')
 			:addClass('wikitable align-center-2 align-right-3')
 			:css({ width = '100%',
 				['margin'] = '0' })
 	
 	requirements:tag('caption'):wikitext("Requirements"):done()
+	
+	-- Skills
 	local tr = requirements:tag('tr')
 		if #skills ~= 0 then
 			tr:tag('th'):attr('colspan', 2):wikitext('Skill'):done()
@@ -246,13 +253,6 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 			tr:tag('th'):wikitext('XP'):done()
 		end	
 	
-	local membersTemplate = edit
-	if members == 'Yes' then
-		membersTemplate = "[[File:Member icon.png|center|link=Members]]"	
-	elseif members == 'No' then
-		membersTemplate = "[[File:Free-to-play icon.png|center|link=Free-to-play]]"	
-	end
-
 	local unknownBoostableFlag = false
 	if #skills ~= 0 then
 		for i, v in ipairs(skills) do
@@ -271,10 +271,20 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 				:tag('td'):wikitext(v.experience):done()
 		end
 	end
-	
+
+	-- Notes
+
 	if notes ~= nil then
 		requirements:tag('tr')
 			:tag('td'):attr('colspan', 4):wikitext(notes):done()
+	end
+
+	-- Members and Ticks row
+	local membersTemplate = edit
+	if members == 'Yes' then
+		membersTemplate = "[[File:Member icon.png|center|link=Members]]"	
+	elseif members == 'No' then
+		membersTemplate = "[[File:Free-to-play icon.png|center|link=Free-to-play]]"	
 	end
 	
 	local tr = requirements:tag('tr')
@@ -303,6 +313,7 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		tr:tag('td'):attr('title', ticks .. ' ticks (' .. secs .. 's) per action'):wikitext(ticks .. ' (' .. secs .. 's) ' .. note):done()
 	end
 	
+	--Tools and Facilities row
 	if tools ~= nil or facilities ~= nil then
 		local toolImgs = toolImages(tools)
 		local facilityLnks = facilityLinks(facilities)
@@ -313,6 +324,9 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 			:tag('td'):css({ ['text-align'] = 'center' }):wikitext(facilityLnks):done()
 	end
 	
+	-- END OF REQUIREMENTS table
+	----------------------------------------------------------------------------
+
 	local materialsTable = mw.html.create('table')
 			:addClass('wikitable align-center-1 align-right-3 align-right-4')
 			:css({ width = '100%',
