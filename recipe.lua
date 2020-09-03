@@ -231,10 +231,6 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		return table.concat(links, "<br />")
 	end
 
-	-- Create div for recipe table
-	local parent = mw.html.create('div')
-			:css({width = 'max-content' })
-
 	----------------------------------------------------------------------------
 	-- Create table for requirements
 	-- This table contains skill reqs and xp, quest reqs, members req, and ticks
@@ -327,16 +323,24 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 	-- END OF REQUIREMENTS table
 	----------------------------------------------------------------------------
 
+	----------------------------------------------------------------------------
+	-- Create table for materials and products
+	-- Contains materials (item, qty, cost), total cost, products, and profit
+
 	local materialsTable = mw.html.create('table')
 			:addClass('wikitable align-center-1 align-right-3 align-right-4')
 			:css({ width = '100%',
 				['margin-top'] = '-1px' })	
 
 	materialsTable:tag('caption'):wikitext("Materials"):done()
+
+	-- Table header
 	materialsTable:tag('tr')
 		:tag('th'):attr('colspan', 2):wikitext('Item'):done()
 		:tag('th'):wikitext('Quantity'):done()
 		:tag('th'):wikitext('Cost'):done()
+
+	-- Materials
 	local currency_costs = {
 		['Coins'] = 0 
 	}
@@ -355,6 +359,7 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		materialsTable:node(row)
 	end
 	
+	-- Total cost
 	if #materials == 0 then
 		materialsTable:tag('tr')
 			:tag('td'):attr('colspan','5'):css({ ['font-style'] = 'italic', ['text-align'] = 'center' }):wikitext('Materials unlisted '..editbutton()):done()
@@ -368,6 +373,7 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 			:tag('td'):css({['text-align'] = 'right'}):wikitext(total_cost_breakdown)
 	end
 	
+	-- Products
 	local output_cost = {
 		['Coins'] = 0
 	}
@@ -386,6 +392,7 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		materialsTable:node(row)
 	end
 
+	-- Profit
 	if output_cost['Coins'] > 0 then
 		local profit = output_cost['Coins'] - currency_costs['Coins']
 		local note
@@ -418,9 +425,16 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 			:tag('td'):css({['text-align'] = 'right'}):wikitext(coins(profit) .. note)
 	end
 	
+	-- END OF MATERIALS AND PRODUCTS table
+	----------------------------------------------------------------------------
+
+	-- Append the two tables a parent div
+	local parent = mw.html.create('div')
+			:css({width = 'max-content' })
 	parent:node(requirements)
 	parent:node(materialsTable)
 	
+	-- Set smw stuff
 	if not nosmw then
 		local jsonObject = {skills = skills, materials = {}, output = output}
 		local materialNames = {}
@@ -435,11 +449,13 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		})
 	end
 
+	-- If there are notes, add a Reflist section
 	local outro = ''
 	if hasreftag then
 		outro = '\n' .. frame:extensionTag{ name='references', args = { group='r' } }
 	end
 
+	-- Return div with tables + categories + reflist
 	return tostring(parent) .. categories(args, unknownBoostableFlag) .. outro
 end
 
