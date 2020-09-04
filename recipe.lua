@@ -163,6 +163,36 @@ function p.main(frame)
 	return p._main(frame, args, args.tools, skills, members, args.notes, materials, output, args.facilities, args.ticks, args.ticksnote, nosmw)
 end
 
+local function generate_skills_rows(skills)
+	local requirements = {}
+	local unknown_boostable_flag = false
+
+	-- Should this use yesno instead of lower comparison?
+	for i, v in ipairs(skills) do
+
+		local levelText = v.level
+		-- Determine which boostable flag to add
+		if(string.lower(v.boostable) == 'yes') then
+			levelText = levelText .. ' <sup title="This requirement is boostable" style="cursor:help; text-decoration: underline dotted;">(b)</sup>'
+		elseif(string.lower(v.boostable) == 'no') then
+			levelText = levelText .. ' <sup title="This requirement is not boostable" style="cursor:help; text-decoration: underline dotted;">(ub)</sup>'
+		elseif(tonumber(v.level) > 1) then
+			levelText = levelText .. ' <sup title="Unknown whether this requirement is boostable" style="cursor:help; text-decoration: underline dotted;">?</sup>'
+			unknown_boostable_flag = true
+		end
+
+		requirement = mw.html.create('tr')
+		requirement
+			:tag('td'):attr('colspan', 2):wikitext(skillpic(v.name, nil, true)):done()
+			:tag('td'):wikitext(levelText):done()
+			:tag('td'):wikitext(v.experience):done()
+
+		table.insert(requirements, requirement)
+	end
+
+	return requirements, unknown_boostable_flag
+end
+
 local function make_row(frame, item_data)
 	local classOverride
 	local textAlign = 'right'
@@ -340,21 +370,10 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		end	
 	
 	local unknownBoostableFlag = false
-	
-	for i, v in ipairs(skills) do
-		local levelText = v.level
-		if(string.lower(v.boostable) == 'yes') then
-			levelText = levelText .. ' <sup title="This requirement is boostable" style="cursor:help; text-decoration: underline dotted;">(b)</sup>'
-		elseif(string.lower(v.boostable) == 'no') then
-			levelText = levelText .. ' <sup title="This requirement is not boostable" style="cursor:help; text-decoration: underline dotted;">(ub)</sup>'
-		elseif(tonumber(v.level) > 1) then
-			levelText = levelText .. ' <sup title="Unknown whether this requirement is boostable" style="cursor:help; text-decoration: underline dotted;">?</sup>'
-			unknownBoostableFlag = true
-		end
-		requirements:tag('tr')
-			:tag('td'):attr('colspan', 2):wikitext(skillpic(v.name, nil, true)):done()
-			:tag('td'):wikitext(levelText):done()
-			:tag('td'):wikitext(v.experience):done()
+	skill_requirement_rows, unknown_boostable_flag = generate_skills_rows(skills)
+	unknownBoostableFlag = unknown_boostable_flag
+	for _, row in ipairs(skill_requirement_rows) do
+		tr:node(row)
 	end
 
 	-- Notes
