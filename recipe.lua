@@ -204,6 +204,7 @@ local function generate_ticks_cell(frame, ticks, ticks_note)
 	end
 
 	-- Handle cases where no ticks are added, NA is used, Varies is used, or a number is given (default).
+	-- Breaks if passed a string for ticks since tonumber produces a nil value.
 	if (ticks or '') == '' then
 		ticks_cell:wikitext(edit):done()
 	elseif string.lower(ticks) == 'na' then
@@ -338,9 +339,7 @@ end
 --
 -- Main
 --
-function p._main(frame, args, tools, skills, members, notes, materials, output, facilities, ticks, ticks_note, nosmw)
-	local hasreftag = false
-	
+function p._main(frame, args, tools, skills, members, notes, materials, output, facilities, ticks, ticks_note, nosmw)	
 	local function toolImages(t)
 		local images = {}
 				
@@ -433,7 +432,6 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		:tag('th'):attr('title', 'Ticks per action'):wikitext('[[RuneScape clock#Length of a tick|Ticks]]'):done()
 
 	local ticks_cell, has_ticks_ref_tag = generate_ticks_cell(frame, ticks, ticks_note)
-	hasreftag = hasreftag or has_ticks_ref_tag
 
 	members_and_ticks_row:node(ticks_cell)
 	
@@ -471,23 +469,18 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		:tag('th'):wikitext('Cost'):done()
 
 	-- Materials
-	
-	material_rows, currency_costs, has_material_ref_tag = generate_rows(frame, materials)
-
-	hasreftag = hasreftag or has_material_ref_tag
+	material_rows, material_costs, has_material_ref_tag = generate_rows(frame, materials)
 
 	for _, row in ipairs(material_rows) do
 		materialsTable:node(row)
 	end
 
 	-- Total cost
-	local total_cost_row = generate_total_cost_row(materials, currency_costs)
+	local total_cost_row = generate_total_cost_row(materials, material_costs)
 	materialsTable:node(total_cost_row)
 	
 	-- Products
 	output_rows, output_cost, has_output_ref_tag = generate_rows(frame, output)
-
-	hasreftag = hasreftag or has_output_ref_tag
 
 	for _, row in ipairs(output_rows) do
 		materialsTable:node(row)
@@ -495,9 +488,7 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 
 	-- Profit
 	if output_cost['Coins'] > 0 then
-		local profit_row, has_profit_ref_tag = generate_profit_row(frame, ticks, currency_costs['Coins'], output_cost['Coins'])
-		hasreftag = hasreftag or has_profit_ref_tag
-		
+		local profit_row, has_profit_ref_tag = generate_profit_row(frame, ticks, material_costs['Coins'], output_cost['Coins'])
 		materialsTable:node(profit_row)
 	end
 	
@@ -525,9 +516,10 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		})
 	end
 
-	-- If there are notes, add a Reflist section
+	-- If there are any ref tags, add a Reflist section
 	local outro = ''
-	if hasreftag then
+	local has_ref_tag = has_ticks_ref_tag or has_material_ref_tag or has_output_ref_tag or has_profit_ref_tag
+	if has_ref_tag then
 		outro = '\n' .. frame:extensionTag{ name='references', args = { group='r' } }
 	end
 
