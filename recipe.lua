@@ -362,6 +362,8 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 	requirements:tag('caption'):wikitext("Requirements"):done()
 	
 	-- Skills
+	local unknownBoostableFlag = false
+
 	if #skills ~= 0 then
 
 		local skill_requirements = mw.html.create('tr')
@@ -370,7 +372,6 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 			:tag('th'):wikitext('Level'):done()
 			:tag('th'):wikitext('XP'):done()
 		
-		local unknownBoostableFlag = false
 		skill_requirement_rows, unknown_boostable_flag = generate_skills_rows(skills)
 		unknownBoostableFlag = unknown_boostable_flag
 		for _, row in ipairs(skill_requirement_rows) do
