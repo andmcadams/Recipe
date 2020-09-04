@@ -362,7 +362,7 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 	requirements:tag('caption'):wikitext("Requirements"):done()
 	
 	-- Skills
-	local unknownBoostableFlag = false
+	local unknown_boostable_flag = false
 
 	if #skills ~= 0 then
 
@@ -373,7 +373,7 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 			:tag('th'):wikitext('XP'):done()
 		
 		skill_requirement_rows, unknown_boostable_flag = generate_skills_rows(skills)
-		unknownBoostableFlag = unknown_boostable_flag
+
 		for _, row in ipairs(skill_requirement_rows) do
 			skill_requirements:node(row)
 		end
@@ -516,16 +516,16 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 	end
 
 	-- Return div with tables + categories + reflist
-	return tostring(parent) .. categories(args, unknownBoostableFlag) .. outro
+	return tostring(parent) .. categories(args, unknown_boostable_flag) .. outro
 end
 
-function categories(args, unknownBoostableFlag)
+function categories(args, unknown_boostable_flag)
 	if not onmain() then
 		return ''
 	end
 	local cats = {}
 	
-	if unknownBoostableFlag then
+	if unknown_boostable_flag then
 		table.insert(cats, '[[Category:Recipes missing boostable]]')
 	end
 	
