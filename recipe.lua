@@ -340,22 +340,21 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		end	
 	
 	local unknownBoostableFlag = false
-	if #skills ~= 0 then
-		for i, v in ipairs(skills) do
-			local levelText = v.level
-			if(string.lower(v.boostable) == 'yes') then
-				levelText = levelText .. ' <sup title="This requirement is boostable" style="cursor:help; text-decoration: underline dotted;">(b)</sup>'
-			elseif(string.lower(v.boostable) == 'no') then
-				levelText = levelText .. ' <sup title="This requirement is not boostable" style="cursor:help; text-decoration: underline dotted;">(ub)</sup>'
-			elseif(tonumber(v.level) > 1) then
-				levelText = levelText .. ' <sup title="Unknown whether this requirement is boostable" style="cursor:help; text-decoration: underline dotted;">?</sup>'
-				unknownBoostableFlag = true
-			end
-			requirements:tag('tr')
-				:tag('td'):attr('colspan', 2):wikitext(skillpic(v.name, nil, true)):done()
-				:tag('td'):wikitext(levelText):done()
-				:tag('td'):wikitext(v.experience):done()
+	
+	for i, v in ipairs(skills) do
+		local levelText = v.level
+		if(string.lower(v.boostable) == 'yes') then
+			levelText = levelText .. ' <sup title="This requirement is boostable" style="cursor:help; text-decoration: underline dotted;">(b)</sup>'
+		elseif(string.lower(v.boostable) == 'no') then
+			levelText = levelText .. ' <sup title="This requirement is not boostable" style="cursor:help; text-decoration: underline dotted;">(ub)</sup>'
+		elseif(tonumber(v.level) > 1) then
+			levelText = levelText .. ' <sup title="Unknown whether this requirement is boostable" style="cursor:help; text-decoration: underline dotted;">?</sup>'
+			unknownBoostableFlag = true
 		end
+		requirements:tag('tr')
+			:tag('td'):attr('colspan', 2):wikitext(skillpic(v.name, nil, true)):done()
+			:tag('td'):wikitext(levelText):done()
+			:tag('td'):wikitext(v.experience):done()
 	end
 
 	-- Notes
