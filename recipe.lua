@@ -193,6 +193,33 @@ local function generate_skills_rows(skills)
 	return requirements, unknown_boostable_flag
 end
 
+local function generate_ticks_cell(frame, ticks, ticks_note)
+	local has_ref_tag = false
+	local ticks_cell = mw.html.create('td')
+	local note = ''
+
+	-- Prepare a note if ticks_note is given
+	if ticks_note ~= nil then
+		note = frame:extensionTag{ name='ref', content = ticks_note, args = { group='r' } }
+	end
+
+	-- Handle cases where no ticks are added, NA is used, Varies is used, or a number is given (default).
+	if (ticks or '') == '' then
+		ticks_cell:wikitext(edit):done()
+	elseif string.lower(ticks) == 'na' then
+		ticks_cell:addClass('table-na'):css({ ['text-align'] = center }):wikitext('N/A'):done()
+	elseif string.lower(ticks) == 'varies' then
+		has_ref_tag = true
+		ticks_cell:wikitext('Varies' .. note):done()
+	else
+		local secs = tonumber(ticks, 10) * 0.6
+		has_ref_tag = true
+		ticks_cell:attr('title', ticks .. ' ticks (' .. secs .. 's) per action'):wikitext(ticks .. ' (' .. secs .. 's) ' .. note):done()
+	end
+
+	return ticks_cell, has_ref_tag
+end
+
 local function make_row(frame, item_data)
 	local classOverride
 	local textAlign = 'right'
@@ -311,7 +338,7 @@ end
 --
 -- Main
 --
-function p._main(frame, args, tools, skills, members, notes, materials, output, facilities, ticks, ticksnote, nosmw)
+function p._main(frame, args, tools, skills, members, notes, materials, output, facilities, ticks, ticks_note, nosmw)
 	local hasreftag = false
 	
 	local function toolImages(t)
@@ -383,13 +410,16 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 
 
 	-- Notes
-
 	if notes ~= nil then
 		requirements:tag('tr')
 			:tag('td'):attr('colspan', 4):wikitext(notes):done()
 	end
 
 	-- Members and Ticks row
+
+	local members_and_ticks_row = mw.html.create('tr')
+
+	-- Should this use yesno?
 	local membersTemplate = edit
 	if members == 'Yes' then
 		membersTemplate = "[[File:Member icon.png|center|link=Members]]"	
@@ -397,32 +427,18 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		membersTemplate = "[[File:Free-to-play icon.png|center|link=Free-to-play]]"	
 	end
 	
-	local tr = requirements:tag('tr')
-	tr:tag('th'):wikitext('Members'):done()
-	tr:tag('td'):wikitext(membersTemplate):done()
-	tr:tag('th'):attr('title', 'Ticks per action'):wikitext('[[RuneScape clock#Length of a tick|Ticks]]'):done()
-	if (ticks or '') == '' then
-		tr:tag('td'):wikitext(edit):done()
-	elseif string.lower(ticks) == 'na' then
-		local classOverride = 'table-na'
-		tr:tag('td'):addClass(classOverride):css({ ['text-align'] = center }):wikitext('N/A'):done()
-	elseif string.lower(ticks) == 'varies' then
-		local note = ''
-		if ticksnote ~= nil then
-			note = frame:extensionTag{ name='ref', content = ticksnote, args = { group='r' } }
-			hasreftag = true
-		end
-		tr:tag('td'):wikitext('Varies' .. note):done()
-	else
-		local secs = tonumber(ticks, 10) * 0.6
-		local note = ''
-		if ticksnote ~= nil then
-			note = frame:extensionTag{ name='ref', content = ticksnote, args = { group='r' } }
-			hasreftag = true
-		end
-		tr:tag('td'):attr('title', ticks .. ' ticks (' .. secs .. 's) per action'):wikitext(ticks .. ' (' .. secs .. 's) ' .. note):done()
-	end
+	members_and_ticks_row
+		:tag('th'):wikitext('Members'):done()
+		:tag('td'):wikitext(membersTemplate):done()
+		:tag('th'):attr('title', 'Ticks per action'):wikitext('[[RuneScape clock#Length of a tick|Ticks]]'):done()
+
+	local ticks_cell, has_ticks_ref_tag = generate_ticks_cell(frame, ticks, ticks_note)
+	hasreftag = hasreftag or has_ticks_ref_tag
+
+	members_and_ticks_row:node(ticks_cell)
 	
+	requirements:node(members_and_ticks_row)
+
 	--Tools and Facilities row
 	if tools ~= nil or facilities ~= nil then
 		local toolImgs = toolImages(tools)
