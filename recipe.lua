@@ -163,6 +163,66 @@ function p.main(frame)
 	return p._main(frame, args, args.tools, skills, members, args.notes, materials, output, args.facilities, args.ticks, args.ticksnote, nosmw)
 end
 
+local function make_row(frame, item_data)
+	local classOverride
+	local textAlign = 'right'
+	local has_ref_tag = false
+
+	if item_data.currency_name ~= nil then
+		mat_ttl = currencies(item_data.quantity * item_data.cost, item_data.currency_name)
+	elseif item_data.cost == 0 then
+		mat_ttl = 'N/A'
+		classOverride = 'table-na'
+		textAlign = 'center'
+	else
+		mat_ttl = coins(item_data.quantity * item_data.cost)
+	end
+	local name = item_data.txt and string.format('[[%s|%s]]', item_data.name, item_data.txt) or string.format('[[%s]]', item_data.name)
+	local itemnote = item_data.outputnote and frame:extensionTag{ name = 'ref', content = item_data.outputnote, args = { group = 'r' } } or ''
+	if (itemnote ~= '') then has_ref_tag = true end
+	local quantitynote = item_data.quantitynote and frame:extensionTag{ name = 'ref', content = item_data.quantitynote, args = { group = 'r' } } or ''
+	if (quantitynote ~= '') then has_ref_tag = true end
+	return mw.html.create('tr')
+		:tag('td'):wikitext(item_data.image):done()
+		:tag('td'):wikitext(name .. itemnote):done()
+		:tag('td'):wikitext(commas._add(item_data.quantity) .. quantitynote):done()
+		:tag('td'):addClass(classOverride):css({ ['text-align'] = textAlign }):wikitext(mat_ttl):done(),
+			item_data.quantity * item_data.cost,
+			has_ref_tag
+end
+
+-- Take a table created from mat_list and generate rows from it.
+-- Outputs:
+--		   rows - array, each entry is a row for one item in the items table
+--         currency_costs - table, a table containing currencies as keys and amount for all items as values
+--		   has_ref_tag - bool, true iff one or more items have a note set
+local function generate_rows(frame, items)
+
+	local currency_costs = {
+		['Coins'] = 0 
+	}
+
+	local has_ref_tag = false
+	local rows = {}
+	for i, v in ipairs(items) do
+		local row, row_cost, has_row_note = make_row(frame, v)
+		
+		if row_cost ~= 0 then
+			if v.currency_name ~= nil then
+				currency_costs[v.currency_name] = (currency_costs[v.currency_name] and currency_costs[v.currency_name] or 0) + v.quantity * v.cost
+			else
+				currency_costs['Coins'] = currency_costs['Coins'] + v.quantity * v.cost
+			end
+		end
+
+		has_ref_tag = has_ref_tag or has_row_note
+		table.insert(rows, row)
+	end
+
+
+	return rows, currency_costs, has_ref_tag
+end
+
 -- Return the "Total Cost" row of the recipe table.
 -- Inputs:
 --        items - table, generated from mat_list
@@ -186,36 +246,45 @@ function generate_total_cost_row(items, item_costs)
 
 	return total_cost_row
 end
+
+function generate_profit_row(frame, ticks, materials_coins_cost, outputs_coins_cost)
+	local profit = outputs_coins_cost - materials_coins_cost
+	local note = ''
+	local has_ref_tag = false
+
+	if((ticks ~= nil) and (tonumber(ticks) == 0)) then
+		if(((6000 * 8) * profit) > 5000000) then -- 8 actions per tick is basically max 0t actions register afaik
+			note = ((frame:extensionTag{
+				name = 'ref',
+				content = 'Due to Grand Exchange prices changing based on trade volume, this profit may not be fully accurate if the components are infrequently traded.',
+				args = { group = 'r' }
+			}) .. '[[Category:Recipes with questionable profit]]')
+			has_ref_tag = true
+		end
+	else
+		if(((6000 / (tonumber(ticks) or 5)) * profit) > 5000000) then
+			note = ((frame:extensionTag{
+				name = 'ref',
+				content = 'Due to Grand Exchange prices changing based on trade volume, this profit may not be fully accurate if the components are infrequently traded.',
+				args = { group = 'r' }
+			}) .. '[[Category:Recipes with questionable profit]]')
+			has_ref_tag = true
+		end
+	end
+
+	local profit_row = mw.html.create('tr')
+	profit_row
+		:tag('th'):attr('colspan', 3):css({['text-align'] = 'right'}):wikitext('Profit'):done()
+		:tag('td'):css({['text-align'] = 'right'}):wikitext(coins(profit) .. note)
+
+	return profit_row, has_ref_tag
+end
+
 --
 -- Main
 --
 function p._main(frame, args, tools, skills, members, notes, materials, output, facilities, ticks, ticksnote, nosmw)
 	local hasreftag = false
-	local function make_row(item_data)
-		local classOverride
-		local textAlign = 'right'
-		if item_data.currency_name ~= nil then
-			mat_ttl = currencies(item_data.quantity * item_data.cost, item_data.currency_name)
-		elseif item_data.cost == 0 then
-			mat_ttl = 'N/A'
-			classOverride = 'table-na'
-			textAlign = 'center'
-		else
-			mat_ttl = coins(item_data.quantity * item_data.cost)
-		end
-		local name = item_data.txt and string.format('[[%s|%s]]', item_data.name, item_data.txt) or string.format('[[%s]]', item_data.name)
-		local itemnote = item_data.outputnote and frame:extensionTag{ name = 'ref', content = item_data.outputnote, args = { group = 'r' } } or ''
-		if (itemnote ~= '') then hasreftag = true end
-		local quantitynote = item_data.quantitynote and frame:extensionTag{ name = 'ref', content = item_data.quantitynote, args = { group = 'r' } } or ''
-		if (quantitynote ~= '') then hasreftag = true end
-		return mw.html.create('tr')
-			:tag('td'):wikitext(item_data.image):done()
-			:tag('td'):wikitext(name .. itemnote):done()
-			:tag('td'):wikitext(commas._add(item_data.quantity) .. quantitynote):done()
-			:tag('td'):addClass(classOverride):css({ ['text-align'] = textAlign }):wikitext(mat_ttl):done(),
-				item_data.quantity * item_data.cost,
-				note ~= nil
-	end
 	
 	local function toolImages(t)
 		local images = {}
@@ -364,40 +433,8 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 		:tag('th'):wikitext('Cost'):done()
 
 	-- Materials
-
-	-- Take a table created from mat_list and generate rows from it.
-	-- Outputs:
-	--		   rows - array, each entry is a row for one item in the items table
-	--         currency_costs - table, a table containing currencies as keys and amount for all items as values
-	--		   has_ref_tag - bool, true iff one or more items have a note set
-	local function create_rows(items)
-
-		local currency_costs = {
-			['Coins'] = 0 
-		}
-
-		local has_ref_tag = false
-		rows = {}
-		for i, v in ipairs(items) do
-			local row, row_cost, has_row_note = make_row(v)
-			
-			if row_cost ~= 0 then
-				if v.currency_name ~= nil then
-					currency_costs[v.currency_name] = (currency_costs[v.currency_name] and currency_costs[v.currency_name] or 0) + v.quantity * v.cost
-				else
-					currency_costs['Coins'] = currency_costs['Coins'] + v.quantity * v.cost
-				end
-			end
-
-			has_ref_tag = has_ref_tag or has_row_note
-			table.insert(rows, row)
-		end
-
-
-		return rows, currency_costs, has_ref_tag
-	end
 	
-	material_rows, currency_costs, has_material_ref_tag = create_rows(materials)
+	material_rows, currency_costs, has_material_ref_tag = generate_rows(frame, materials)
 
 	hasreftag = hasreftag or has_material_ref_tag
 
@@ -408,22 +445,9 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 	-- Total cost
 	local total_cost_row = generate_total_cost_row(materials, currency_costs)
 	materialsTable:node(total_cost_row)
-
-	if #materials == 0 then
-		materialsTable:tag('tr')
-			:tag('td'):attr('colspan','5'):css({ ['font-style'] = 'italic', ['text-align'] = 'center' }):wikitext('Materials unlisted '..editbutton()):done()
-	else
-		local total_cost_breakdown = ''
-		for i, v in next, currency_costs, nil do
-			total_cost_breakdown = (string.len(total_cost_breakdown) == 0 and total_cost_breakdown or total_cost_breakdown .. '<br />') .. (i == 'Coins' and coins(v) or currencies(v, i))
-		end
-		materialsTable:tag('tr')
-			:tag('th'):attr('colspan', 3):css({['text-align'] = 'right'}):wikitext('Total Cost'):done()
-			:tag('td'):css({['text-align'] = 'right'}):wikitext(total_cost_breakdown)
-	end
 	
 	-- Products
-	output_rows, output_cost, has_output_ref_tag = create_rows(output)
+	output_rows, output_cost, has_output_ref_tag = generate_rows(frame, output)
 
 	hasreftag = hasreftag or has_output_ref_tag
 
@@ -433,35 +457,10 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 
 	-- Profit
 	if output_cost['Coins'] > 0 then
-		local profit = output_cost['Coins'] - currency_costs['Coins']
-		local note
-		if((ticks ~= nil) and (tonumber(ticks) == 0)) then
-			if(((6000 * 8) * profit) > 5000000) then -- 8 actions per tick is basically max 0t actions register afaik
-				note = ((frame:extensionTag{
-					name = 'ref',
-					content = 'Due to Grand Exchange prices changing based on trade volume, this profit may not be fully accurate if the components are infrequently traded.',
-					args = { group = 'r' }
-				}) .. '[[Category:Recipes with questionable profit]]')
-			hasreftag = true
-			else
-				note = ''
-			end
-		else
-			if(((6000 / (tonumber(ticks) or 5)) * profit) > 5000000) then
-				note = ((frame:extensionTag{
-					name = 'ref',
-					content = 'Due to Grand Exchange prices changing based on trade volume, this profit may not be fully accurate if the components are infrequently traded.',
-					args = { group = 'r' }
-				}) .. '[[Category:Recipes with questionable profit]]')
-			hasreftag = true
-			else
-				note = ''
-			end
-		end
+		local profit_row, has_profit_ref_tag = generate_profit_row(frame, ticks, currency_costs['Coins'], output_cost['Coins'])
+		hasreftag = hasreftag or has_profit_ref_tag
 		
-		materialsTable:tag('tr')
-			:tag('th'):attr('colspan', 3):css({['text-align'] = 'right'}):wikitext('Profit'):done()
-			:tag('td'):css({['text-align'] = 'right'}):wikitext(coins(profit) .. note)
+		materialsTable:node(profit_row)
 	end
 	
 -- END OF MATERIALS AND PRODUCTS table
@@ -524,4 +523,3 @@ function categories(args, unknownBoostableFlag)
 end
 
 return p
-
