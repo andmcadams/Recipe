@@ -252,26 +252,24 @@ function generate_profit_row(frame, ticks, materials_coins_cost, outputs_coins_c
 	local note = ''
 	local has_ref_tag = false
 
-	if((ticks ~= nil) and (tonumber(ticks) == 0)) then
-		if(((6000 * 8) * profit) > 5000000) then -- 8 actions per tick is basically max 0t actions register afaik
-			note = ((frame:extensionTag{
-				name = 'ref',
-				content = 'Due to Grand Exchange prices changing based on trade volume, this profit may not be fully accurate if the components are infrequently traded.',
-				args = { group = 'r' }
-			}) .. '[[Category:Recipes with questionable profit]]')
-			has_ref_tag = true
-		end
-	else
-		if(((6000 / (tonumber(ticks) or 5)) * profit) > 5000000) then
-			note = ((frame:extensionTag{
-				name = 'ref',
-				content = 'Due to Grand Exchange prices changing based on trade volume, this profit may not be fully accurate if the components are infrequently traded.',
-				args = { group = 'r' }
-			}) .. '[[Category:Recipes with questionable profit]]')
-			has_ref_tag = true
-		end
+	-- Find ticks per action. Assume 5 if nothing else is given.
+	-- If it takes 0 ticks, set to 1/8 since 8 actions can be performed per tick.
+	local ticks_per_action = tonumber(ticks) or 5
+	if ticks_per_action == 0 then
+		ticks_per_action = 1/8
 	end
 
+	-- Check to see if profit per hour is more than 5m. If it is, slap a warning on the profit row to signal potentially suspect.
+	if(((6000 / ticks_per_action) * profit) > 5000000) then
+		note = ((frame:extensionTag{
+			name = 'ref',
+			content = 'Due to Grand Exchange prices changing based on trade volume, this profit may not be fully accurate if the components are infrequently traded.',
+			args = { group = 'r' }
+		}) .. '[[Category:Recipes with questionable profit]]')
+		has_ref_tag = true
+	end
+
+	-- Create and populate the table row element
 	local profit_row = mw.html.create('tr')
 	profit_row
 		:tag('th'):attr('colspan', 3):css({['text-align'] = 'right'}):wikitext('Profit'):done()
