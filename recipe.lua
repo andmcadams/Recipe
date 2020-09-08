@@ -371,7 +371,7 @@ function generate_profit_row(frame, ticks, materials_coins_cost, outputs_coins_c
 	local profit_row = mw.html.create('tr')
 	profit_row
 		:tag('th'):attr('colspan', 3):css({['text-align'] = 'right'}):wikitext('Profit'):done()
-		:tag('td'):css({['text-align'] = 'right'}):wikitext(coins(profit) .. note)
+		:tag('td'):css({['text-align'] = 'right'}):wikitext(coins(profit) .. note):done()
 
 	return profit_row, has_ref_tag
 end
@@ -541,7 +541,7 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 	
 	-- Set smw stuff
 	if not nosmw then
-		local jsonObject = {skills = skills, materials = {}, output = output}
+		local jsonObject = {skills = skills, materials = {}, output = output[1]}
 		local materialNames = {}
 		for _, v in ipairs(materials) do
 			table.insert(jsonObject.materials, {name = v.name, quantity = v.quantity})
