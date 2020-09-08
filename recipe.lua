@@ -524,8 +524,9 @@ function p._main(frame, args, tools, skills, members, notes, materials, output, 
 	end
 
 	-- Profit
+	local profit_row, has_profit_ref_tag
 	if output_cost['Coins'] > 0 then
-		local profit_row, has_profit_ref_tag = generate_profit_row(frame, ticks, material_costs['Coins'], output_cost['Coins'])
+		profit_row, has_profit_ref_tag = generate_profit_row(frame, ticks, material_costs['Coins'], output_cost['Coins'])
 		materialsTable:node(profit_row)
 	end
 	
