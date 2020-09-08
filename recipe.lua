@@ -101,7 +101,7 @@ function p.main(frame)
 				local name = mat
 				local txt = params.default_to(args[objType..i..'txt'], nil)
 				local qty = params.default_to(args[objType..i..'quantity'],'1')
-				local img = params.default_to(args[objType..i..'pic'], name..'.png')
+				local img = params.default_to(args[objType..i..'pic'], name)..'.png'
 				local cost_v = args[objType..i..'cost']
 				local currencyName = params.default_to(args[objType..i..'currency'], nil)
 				local itemnote = args[objType..i..'itemnote'] or nil
